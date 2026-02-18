@@ -29,7 +29,7 @@ Como el ADC entrega valores de 12 bits y el protocolo USB transmite datos en byt
 ```c
 datosenvio[contador++] = datos[0] & 0xFF;
 datosenvio[contador++] = (datos[0] >> 8) & 0xFF;
-```c
+```
 
 - El primer byte guarda los 8 bits menos significativos.
 - El segundo byte guarda los bits restantes desplazados.
