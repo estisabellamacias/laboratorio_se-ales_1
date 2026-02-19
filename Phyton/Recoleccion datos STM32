@@ -1,0 +1,139 @@
+import sys
+import serial
+import serial.tools.list_ports
+import numpy as np
+import pyqtgraph as pg
+from PyQt5 import QtWidgets, QtCore, QtGui
+
+class STM32App(QtWidgets.QMainWindow):
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("STM32 ADC Real-Time Monitor")
+        self.resize(900, 600)
+
+        # --- CONSTRUCCIÓN DE LA INTERFAZ (UI) ---
+        self.central_widget = QtWidgets.QWidget()
+        self.setCentralWidget(self.central_widget)
+        self.layout_principal = QtWidgets.QVBoxLayout(self.central_widget)
+
+        # Panel de Controles Superior
+        self.panel_controles = QtWidgets.QHBoxLayout()
+        
+        self.cb_ports = QtWidgets.QComboBox()
+        self.cb_ports.setMinimumWidth(150)
+        
+        self.btn_connect = QtWidgets.QPushButton("Conectar")
+        self.btn_connect.setStyleSheet("background-color: #e1e1e1; padding: 5px;")
+        
+        self.btn_record = QtWidgets.QPushButton("Iniciar Grabación")
+        self.btn_record.setCheckable(True)
+        self.btn_record.setStyleSheet("padding: 5px;")
+        
+        self.lbl_status = QtWidgets.QLabel("Estado: Desconectado")
+        
+        self.panel_controles.addWidget(QtWidgets.QLabel("Puerto:"))
+        self.panel_controles.addWidget(self.cb_ports)
+        self.panel_controles.addWidget(self.btn_connect)
+        self.panel_controles.addWidget(self.btn_record)
+        self.panel_controles.addStretch()
+        self.panel_controles.addWidget(self.lbl_status)
+        
+        self.layout_principal.addLayout(self.panel_controles)
+
+        # Gráfica (pyqtgraph)
+        self.graph_widget = pg.PlotWidget(title="Canal ADC 0")
+        self.graph_widget.setBackground('k') # Fondo negro
+        self.graph_widget.showGrid(x=True, y=True)
+        self.graph_widget.setLabel('left', 'Valor ADC', units='12-bit')
+        self.curve = self.graph_widget.plot(pen=pg.mkPen('y', width=1.5)) # Línea amarilla
+        self.layout_principal.addWidget(self.graph_widget)
+
+        # --- LÓGICA DE FUNCIONAMIENTO ---
+        self.ser = None
+        self.data_buffer = []
+        self.is_recording = False
+        self.file = None
+        
+        # Timer para actualizar la gráfica
+        self.timer = QtCore.QTimer()
+        self.timer.timeout.connect(self.update_data)
+
+        # Eventos
+        self.btn_connect.clicked.connect(self.toggle_connection)
+        self.btn_record.clicked.connect(self.toggle_recording)
+        
+        # Llenar lista de puertos al iniciar
+        self.refresh_ports()
+
+    def refresh_ports(self):
+        self.cb_ports.clear()
+        ports = [p.device for p in serial.tools.list_ports.comports()]
+        self.cb_ports.addItems(ports)
+
+    def toggle_connection(self):
+        if self.ser is None or not self.ser.is_open:
+            try:
+                port = self.cb_ports.currentText()
+                self.ser = serial.Serial(port, 115200, timeout=0.01)
+                self.btn_connect.setText("Desconectar")
+                self.btn_connect.setStyleSheet("background-color: #ff9999;")
+                self.lbl_status.setText(f"Conectado a {port}")
+                self.timer.start(10) # Frecuencia de actualización rápida
+            except Exception as e:
+                QtWidgets.QMessageBox.critical(self, "Error", f"No se pudo conectar: {e}")
+        else:
+            self.timer.stop()
+            if self.ser: self.ser.close()
+            self.ser = None
+            self.btn_connect.setText("Conectar")
+            self.btn_connect.setStyleSheet("background-color: #e1e1e1;")
+            self.lbl_status.setText("Estado: Desconectado")
+
+    def toggle_recording(self):
+        if self.btn_record.isChecked():
+            # Abrir archivo para guardar
+            filename, _ = QtWidgets.QFileDialog.getSaveFileName(self, "Guardar Datos", "", "Text Files (*.txt)")
+            if filename:
+                self.file = open(filename, "w")
+                self.btn_record.setText("Detener Grabación")
+                self.lbl_status.setText("Estado: GRABANDO...")
+                self.is_recording = True
+            else:
+                self.btn_record.setChecked(False)
+        else:
+            self.is_recording = False
+            if self.file:
+                self.file.close()
+                self.file = None
+            self.btn_record.setText("Iniciar Grabación")
+            self.lbl_status.setText("Estado: Conectado")
+
+    def update_data(self):
+        if self.ser and self.ser.is_open:
+            # Tu STM32 manda paquetes de 50 bytes (25 muestras x 2 bytes cada una)
+            if self.ser.in_waiting >= 50:
+                try:
+                    raw_data = self.ser.read(50)
+                    # Convertir bytes a uint16 (Little Endian)
+                    samples = np.frombuffer(raw_data, dtype=np.uint16)
+                    
+                    # Actualizar buffer de gráfica
+                    self.data_buffer.extend(samples.astype(float))
+                    if len(self.data_buffer) > 1000: # Mostrar últimas 1000 muestras
+                        self.data_buffer = self.data_buffer[-1000:]
+                    
+                    self.curve.setData(self.data_buffer)
+
+                    # Guardar si la grabación está activa
+                    if self.is_recording and self.file:
+                        for s in samples:
+                            self.file.write(f"{s}\n")
+                except:
+                    pass
+
+if __name__ == "__main__":
+    app = QtWidgets.QApplication(sys.argv)
+    app.setStyle("Fusion") # Estilo moderno
+    ventana = STM32App()
+    ventana.show()
+    sys.exit(app.exec_())
