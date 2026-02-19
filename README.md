@@ -176,7 +176,7 @@ Los siguientes diagramas representan la lógica algorítmica implementada en cad
 
 ***3. PYTHON RECOLECCION DATOS STM32***
 
-<img src="diagramas/Diagrama PYTHON RECOLECCION DATOS STM32" width="600">
+<img src="diagramas/Diagrama PYTHON RECOLECCION DATOS STM32.png" width="600">
 
 <em>Figura 3. Flujo funcional de la interfaz gráfica encargada de la recepción de datos de la STM32</em>
 
