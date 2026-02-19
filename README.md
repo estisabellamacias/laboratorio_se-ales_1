@@ -13,11 +13,71 @@ El análisis de señales biomédicas permite extraer información fisiológica r
 4. Evaluar la calidad de la señal mediante el cálculo de la relación señal-ruido (SNR) tras contaminarla con diferentes tipos de ruido.
 
 ## *Desarrollo de la pratica*
-***Parte A:***  Selección de la señal de Physionet, cómo se importó a Python y la comparación entre el cálculo manual de estadísticos y el uso de funciones predefinidas. 
 
-***Parte B:***
+***1.Calculo estadisticos descriptivos y SNR:*** 
 
-*1. Captura de datos con la STM32 y el generador de señales:*
+**1. Sincronización y Carga de Datos (Partes A y B)**
+
+El código establece una ventana de observación de 8 segundos para asegurar que la comparación entre la señal sintética y la real sea válida.
+
+*- PhysioNet (Parte A):* Utiliza la librería `wfdb` para leer registros profesionales (`.hea` y `.dat`). El script busca automáticamente el canal de ECG y calcula cuántas muestras equivalen a 8 segundos basándose en la frecuencia de muestreo (`fs`) original del archivo.
+
+*- STM32 (Parte B):* Importa los datos capturados por el hardware desde un archivo `.txt` usando `np.loadtxt`. Para esta señal, se asume una fs de 100 Hz, lo que resulta en un bloque de 800 muestras para el análisis.
+
+**2. Normalización Unitaria**
+
+Para que las señales sean comparables morfológicamente, sin importar si vienen de una base de datos o de un ADC de 12 bits, el código aplica un proceso de normalización:
+
+*- Centrado:* Resta la media de la señal para eliminar el offset o desplazamiento de continua, situando la línea base en `0.0`.
+
+*- Escalado:* Divide toda la señal por su valor máximo absoluto, forzando a que los datos oscilen estrictamente en el rango de `[-1, 1]`.
+
+**3. Momentos Estadísticos: Manual vs. Funciones**
+
+Cumpliendo con el requerimiento de programar las fórmulas "desde cero", el código define la función `calcular_estadisticos_manual`:
+
+- Media (`μ`): Calcula el promedio o valor central de la señal. `(media = sum(datos) / n )`
+
+- Desviación Estándar (`σ`): Mide la dispersión de los valores. El código utiliza la corrección de sesgo (`n−1`) para obtener la desviación muestral exacta. `(desv = math.sqrt(sum_d2 / (n - 1)))`
+
+- Asimetría (Skewness) y Curtosis: Implementa el tercer y cuarto momento central para determinar hacia dónde se inclina la distribución y qué tan pronunciado es su pico. `((sum_d3 / n) / (desv**3))` -  `(kurt = (sum_d4 / n) / (desv**4))`
+
+- Validación: El script utiliza `numpy` y `scipy.stats` para verificar que los cálculos manuales sean idénticos a los de las funciones predefinidas de Python. 
+
+Para las funciones espcificas de Phyton se utilizaron las siguientes:
+
+- Media (`μ`): `np.mean(data)`
+  
+- Desviación Estándar (`σ`): Para que este cálculo coincida con la fórmula manual que usa n−1, es necesario configurar un parámetro adicional en `Numpy. np.std(data, ddof=1)`
+
+- Asimetría (Skewness): `stats.skew(data, bias=False)`. Al poner `bias=False`, la función ajusta el cálculo para que sea estadísticamente exacto para una muestra, lo que permite compararlo directamente con tu lógica manual.
+
+- Curtosis: `stats.kurtosis(data, fisher=False, bias=False)`
+  
+**4. Histogramas**
+
+El código genera histogramas con 30 contenedores (`bins`) para visualizar cómo se distribuyen las amplitudes de la señal:
+
+- Método Manual: Clasifica cada dato en su "caja" correspondiente mediante un ciclo `for`.
+
+- Método Automatizado: Utiliza `plt.hist` para validar la distribución visual, permitiendo comparar la señal de PhysioNet frente a la de la STM32.
+
+**5. Análisis de SNR y Contaminación (Parte C)**
+
+El código evalúa la robustez de la señal mediante la Relación Señal-Ruido (SNR), calculada en decibelios (dB). Para ello, contamina la señal de la STM32 con tres tipos de interferencias clínicas:
+
+*- Ruido Gaussiano:* Simula ruido térmico electrónico con un promedio de 0 y una desviación de 0.08.
+
+*- Ruido Impulso:* Modela interferencias súbitas (como fallos de electrodos) inyectando picos aleatorios de gran amplitud (±1.2) que sobresalen de la señal normalizada.
+
+*- Ruido de Artefacto:* Simula la deriva de línea base causada por la respiración, sumando ondas senoidales de baja frecuencia (0.1 y 0.4 Hz).
+
+**6.Tablas comparativas**
+
+El codigo finaliza imprimiendo tablas comparativas en la consola que muestran los resultados de ambos métodos (manual vs. función) y el impacto de cada ruido en el SNR. 
+
+
+***2. Captura de datos con la STM32 y el generador de señales: (Parte B)***
 
 Este código implementa la captura de señales biomédicas utilizando un microcontrolador en este caso la STM32.
 
@@ -55,9 +115,9 @@ datosenvio[contador++] = (datos[0] >> 8) & 0xFF;
 
 **• Transmisión por USB:** Cuando el contador llega a 50 bytes (25 muestras), se dispara la función `CDC_Transmit_FS(datosenvio, 50)`; enviando el paquete a la computadora para su posterior análisis estadístico (media, desviación estándar, etc.) en Python. 
 
-*2. Recoleccion datos de la STM32*
+***3. Recoleccion datos de la STM32 (Parte B)***
 
-Este script implementa una Interfaz Gráfica de Usuario (GUI) que permite la visualización en tiempo real y la captura de señales biomédicas provenientes del microcontrolador STM32.
+Este codigo implementa una Interfaz Gráfica de Usuario (GUI) que permite la visualización en tiempo real y la captura de señales biomédicas provenientes del microcontrolador STM32.
 
 Es la herramienta principal utilizada para generar los archivos de datos necesarios para el análisis estadístico posterior.
 
@@ -72,7 +132,6 @@ La aplicación está desarrollada sobre librerías especializadas en alto rendim
 • `pyserial`: Gestiona la comunicación serial a través del puerto USB (Virtual COM Port) con la STM32, configurada a una velocidad de **115200 baudios**.
 
 • `numpy`: Permite la manipulación eficiente de arreglos de datos y la reconstrucción de las muestras digitales provenientes del ADC.
-
 
 **Componentes del Código**
 
@@ -94,7 +153,10 @@ Esto asegura que se procesen paquetes completos equivalentes a 25 muestras.
 
 • *Grabación de Datos `(toggle_recording)`:* Permite exportar la señal en tiempo real a un archivo .txt. Cada muestra se guarda en una línea nueva, facilitando su importación posterior para los cálculos de media, desviación y otros estadísticos requeridos en la guía
 
-***Parte C:*** Definición de SNR y cómo afectó cada tipo de ruido (gaussiano, impulso y artefacto) a la señal biomédica.
+
+## **Imagenes**
+
+
 
 ## **Diagramas de flujo**
 
