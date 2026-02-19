@@ -55,6 +55,44 @@ datosenvio[contador++] = (datos[0] >> 8) & 0xFF;
 
 **• Transmisión por USB:** Cuando el contador llega a 50 bytes (25 muestras), se dispara la función `CDC_Transmit_FS(datosenvio, 50)`; enviando el paquete a la computadora para su posterior análisis estadístico (media, desviación estándar, etc.) en Python. 
 
+*2. Recoleccion datos de la STM32*
+
+Este script implementa una Interfaz Gráfica de Usuario (GUI) que permite la visualización en tiempo real y la captura de señales biomédicas provenientes del microcontrolador STM32.
+
+Es la herramienta principal utilizada para generar los archivos de datos necesarios para el análisis estadístico posterior.
+
+**Estructura**
+
+La aplicación está desarrollada sobre librerías especializadas en alto rendimiento y procesamiento de datos:
+
+• `PyQt5`: Proporciona la estructura de la interfaz gráfica y la gestión de eventos del usuario (botones, selección de puerto, temporizadores, etc.).
+
+• `pyqtgraph`: Utilizada para el renderizado de la señal en tiempo real.  Se elige por su alta eficiencia en la visualización de grandes volúmenes de datos con bajo consumo de CPU.
+
+• `pyserial`: Gestiona la comunicación serial a través del puerto USB (Virtual COM Port) con la STM32, configurada a una velocidad de **115200 baudios**.
+
+• `numpy`: Permite la manipulación eficiente de arreglos de datos y la reconstrucción de las muestras digitales provenientes del ADC.
+
+
+**Componentes del Código**
+
+• *Gestión de Conexión – `toggle_connection()`*
+
+- Escanea dinámicamente los puertos disponibles.
+- Permite seleccionar el puerto COM correspondiente a la STM32.
+- Al establecer conexión, inicia un `QTimer`.
+- El temporizador ejecuta la lectura de datos cada 10 milisegundos, garantizando una visualización fluida y continua.
+
+*• Procesamiento de Paquetes – `update_data()`*
+
+  - Sincronización: El programa espera hasta que haya al menos 50 bytes disponibles en el buffer de entrada.  
+Esto asegura que se procesen paquetes completos equivalentes a 25 muestras.
+
+  - Reconstrucción de Datos: Se utiliza `np.frombuffer()` para convertir los bytes binarios nuevamente en valores enteros de 12 bits `uint16`, recuperando así los datos originales del ADC.
+
+• *Visualización Dinámica:* La gráfica muestra constantemente las últimas 1000 muestras recibidas, permitiendo monitorear la estabilidad y morfología de la señal biomédica capturada
+
+• *Grabación de Datos `(toggle_recording)`:* Permite exportar la señal en tiempo real a un archivo .txt. Cada muestra se guarda en una línea nueva, facilitando su importación posterior para los cálculos de media, desviación y otros estadísticos requeridos en la guía
 
 ***Parte C:*** Definición de SNR y cómo afectó cada tipo de ruido (gaussiano, impulso y artefacto) a la señal biomédica.
 
