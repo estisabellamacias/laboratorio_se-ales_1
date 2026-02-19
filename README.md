@@ -160,11 +160,26 @@ Esto asegura que se procesen paquetes completos equivalentes a 25 muestras.
 
 ## **Diagramas de flujo**
 
-***1. PYTHON IMPRIMIR GRAFICAS Y HACER CALCULOS ESTADISTICOS***
+Los siguientes diagramas representan la lógica algorítmica implementada en cada módulo del sistema:
+
+***1. PYTHON IMPRIMIR GRAFICAS - HACER CALCULOS ESTADISTICOS - SNR***
+
+<img src="diagramas/Diagrama PYTHON IMPRIMIR GRAFICAS Y HACER CALCULOS ESTADISTICOS.png" width="600">
+
+<em>Figura 1. Flujo algorítmico del análisis estadístico aplicado a las señales adquiridas, incluyendo normalización, estimación de parámetros descriptivos y evaluación de contaminación por ruido.</em>
 
 ***2. CAPTURA DE DATOS STM32:***
 
+<img src="diagramas/Diagrama CAPTURA DE DATOS STM32.png" width="600">
+
+<em>Figura 2. Diagrama de flujo del firmware implementado en la STM32.</em>
+
 ***3. PYTHON RECOLECCION DATOS STM32***
+
+<img src="diagramas/Diagrama PYTHON RECOLECCION DATOS STM32" width="600">
+
+<em>Figura 3. Flujo funcional de la interfaz gráfica encargada de la recepción de datos de la STM32</em>
+
 
 ## **Análisis de Resultados y Preguntas de Discusión**
 
