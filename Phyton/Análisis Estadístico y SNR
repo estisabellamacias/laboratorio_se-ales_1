@@ -1,0 +1,221 @@
+# =============================================================================
+# LABORATORIO DE SEÑALES BIOMÉDICAS: Análisis Estadístico y SNR
+# =============================================================================
+
+import wfdb              # Librería para manejar bases de datos de PhysioNet (archivos .hea y .dat)
+import matplotlib.pyplot as plt  # Biblioteca principal para crear visualizaciones y gráficas
+import numpy as np       # Herramienta para cálculo numérico y manipulación de vectores (arrays)
+import math              # Funciones matemáticas estándar de Python (raíz cuadrada, potencias)
+from scipy import stats  # Módulo estadístico para funciones avanzadas como Skewness y Kurtosis
+
+# --- PASO 0: PARÁMETROS DE ENTRADA ---
+segundos = 8             # Definimos la ventana de observación a 8 segundos
+fs_stm32 = 100           # Frecuencia de muestreo del hardware STM32 (100 datos por segundo)
+
+# =============================================================================
+# 1️⃣ CARGA Y RECORTE DE DATOS (Lógica de sincronización temporal)
+# =============================================================================
+
+# --- Lógica para PhysioNet ---
+ruta_p = r'D:\LABS_SENALES\LAB1\f1o01'
+registro = wfdb.rdrecord(ruta_p)  # Carga el objeto de registro (contiene señal y metadatos)
+# Buscamos dinámicamente el canal que diga 'ecg' para evitar errores si cambia el orden
+ecg_idx = next((i for i, name in enumerate(registro.sig_name) if 'ecg' in name.lower()), 0)
+fs_p = registro.fs                # Obtenemos la frecuencia de muestreo real del archivo (ej. 250 o 500 Hz)
+N_p = int(segundos * fs_p)        # Calculamos cuántas muestras equivalen a 8 segundos (Muestras = Tiempo * Fs)
+# Extraemos los datos, los convertimos a decimales (float) y los aplanamos a un vector de 1D
+data_p_raw = registro.p_signal[:N_p, ecg_idx].astype(float).flatten()
+
+# --- Lógica para STM32 (.txt) ---
+ruta_txt = r'D:\LABS_SENALES\LAB1\senal_generador.txt'
+try:
+    data_txt = np.loadtxt(ruta_txt, skiprows=1) # Intenta leer ignorando la primera fila (encabezados)
+except:
+    data_txt = np.loadtxt(ruta_txt)             # Si falla (no hay texto), lee el archivo normalmente
+
+N_txt = int(segundos * fs_stm32)  # Calculamos muestras para el STM32 (800 muestras para 8s)
+if data_txt.ndim == 1:
+    data_s_raw = data_txt[:N_txt] # Si el archivo es una sola columna, toma los primeros 8s
+else:
+    data_s_raw = data_txt[:N_txt, 1] # Si tiene varias columnas, asume que la amplitud está en la segunda (índice 1)
+
+# =============================================================================
+# 2️⃣ CENTRADO Y ESCALADO LOCAL (Lógica de normalización unitaria)
+# =============================================================================
+
+# Lógica: Se resta la media para centrar en 0 (quitar offset) y se divide por el máximo absoluto del segmento
+data_p_centrada = data_p_raw - np.mean(data_p_raw) # Restamos el promedio para que la línea base sea 0.0
+pico_local_p = np.max(np.abs(data_p_centrada))    # Hallamos el valor más alejado del cero en este bloque de 8s
+data_p = data_p_centrada / pico_local_p if pico_local_p != 0 else data_p_centrada # Normalizamos al rango [-1, 1]
+
+# Repetimos el proceso exactamente igual para la señal del STM32
+data_s_centrada = data_s_raw - np.mean(data_s_raw) # Eliminamos el desplazamiento de continua del ADC
+pico_local_s = np.max(np.abs(data_s_centrada))    # Identificamos el pico máximo (usualmente la onda R)
+data_s = data_s_centrada / pico_local_s if pico_local_s != 0 else data_s_centrada # Normalizamos al rango [-1, 1]
+
+# Creamos los ejes de tiempo dividiendo el índice de cada muestra por su frecuencia respectiva
+t_p = np.arange(len(data_p)) / fs_p
+t_s = np.arange(len(data_s)) / fs_stm32
+
+# =============================================================================
+# 3️⃣ GRÁFICAS DE SEÑALES TEMPORALES (Visualización de morfología)
+# =============================================================================
+
+plt.figure(figsize=(12, 6))
+# Subplot superior para PhysioNet
+plt.subplot(2, 1, 1)
+plt.plot(t_p, data_p, color='royalblue', linewidth=0.8) # Grafica amplitud vs tiempo
+plt.title(f'Señal PhysioNet (Escalado Local: Máximo en 8s = 1.0)')
+plt.ylabel('Amplitud Norm.')
+plt.grid(True, alpha=0.3) # Rejilla tenue para facilitar la lectura de picos
+plt.ylim([-1.1, 1.1])    # Forzamos el límite visual para ver bien los picos normalizados
+
+# Subplot inferior para STM32
+plt.subplot(2, 1, 2)
+plt.plot(t_s, data_s, color='darkorange', linewidth=1)
+plt.title(f'Señal STM32 (Escalado Local: Máximo en 8s = 1.0)')
+plt.xlabel('Tiempo [s]')
+plt.ylabel('Amplitud Norm.')
+plt.grid(True, alpha=0.3)
+plt.ylim([-1.1, 1.1])
+plt.tight_layout() # Ajusta automáticamente los espacios entre gráficas
+plt.show()
+
+# =============================================================================
+# 4️⃣ CÁLCULOS ESTADÍSTICOS (Lógica de momentos estadísticos)
+# =============================================================================
+
+def calcular_estadisticos_manual(datos):
+    """Implementa las fórmulas de momentos centrales de una distribución"""
+    n = len(datos)
+    media = sum(datos) / n  # Cálculo de la esperanza matemática (promedio)
+    sum_d2, sum_d3, sum_d4 = 0, 0, 0
+    for v in datos:
+        dif = v - media      # Diferencia respecto al centro (desviación)
+        sum_d2 += dif**2     # Acumulador para la varianza (segundo momento)
+        sum_d3 += dif**3     # Acumulador para la asimetría (tercer momento)
+        sum_d4 += dif**4     # Acumulador para la curtosis (cuarto momento)
+    
+    # Desviación estándar muestral (usamos n-1 para corregir el sesgo)
+    desv = math.sqrt(sum_d2 / (n - 1))
+    # Coeficiente de asimetría: mide si la señal tiene picos más grandes hacia arriba o abajo
+    skew = (sum_d3 / n) / (desv**3)
+    # Curtosis: mide qué tan "puntiaguda" es la señal respecto a una normal
+    kurt = (sum_d4 / n) / (desv**4)
+    return media, desv, skew, kurt
+
+# Aplicamos la función manual a ambas señales procesadas
+m_p, d_p, s_p, k_p = calcular_estadisticos_manual(data_p)
+m_s, d_s, s_s, k_s = calcular_estadisticos_manual(data_s)
+
+# Usamos librerías estándar para validar que los cálculos manuales sean correctos
+f_m_p, f_d_p = np.mean(data_p), np.std(data_p, ddof=1)
+f_s_p, f_k_p = stats.skew(data_p, bias=False), stats.kurtosis(data_p, fisher=False, bias=False)
+f_m_s, f_d_s = np.mean(data_s), np.std(data_s, ddof=1)
+f_s_s, f_k_s = stats.skew(data_s, bias=False), stats.kurtosis(data_s, fisher=False, bias=False)
+
+# =============================================================================
+# 5️⃣ HISTOGRAMAS (Lógica de densidad de probabilidad discreta)
+# =============================================================================
+
+# --- PhysioNet Histogramas ---
+fig1, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 4))
+min_p, max_p = min(data_p), max(data_p)
+ancho_p = (max_p - min_p) / 30 # Definimos el ancho de cada una de las 30 "cajas" (bins)
+counts_p = [0] * 30
+for v in data_p: # Clasificamos cada dato en su caja correspondiente
+    idx = int((v - min_p) / ancho_p) if ancho_p != 0 else 0
+    if idx >= 30: idx = 29 # El valor máximo entra en la última caja
+    counts_p[idx] += 1
+bins_p = [min_p + (i + 0.5) * ancho_p for i in range(30)] # Centros de las cajas para graficar
+ax1.bar(bins_p, counts_p, width=ancho_p*0.8, color='royalblue', alpha=0.7)
+ax1.set_title('PhysioNet: Histograma MANUAL')
+ax2.hist(data_p, bins=30, color='skyblue', edgecolor='black') # Versión automatizada de Python
+ax2.set_title('PhysioNet: Histograma FUNCIÓN Python')
+plt.tight_layout()
+plt.show()
+
+# --- STM32 Histogramas ---
+fig2, (ax3, ax4) = plt.subplots(1, 2, figsize=(12, 4))
+min_s, max_s = min(data_s), max(data_s)
+ancho_s = (max_s - min_s) / 30
+counts_s = [0] * 30
+for v in data_s: # Repetimos la lógica manual de conteo
+    idx = int((v - min_s) / ancho_s) if ancho_s != 0 else 0
+    if idx >= 30: idx = 29
+    counts_s[idx] += 1
+bins_s = [min_s + (i + 0.5) * ancho_s for i in range(30)]
+ax3.bar(bins_s, counts_s, width=ancho_s*0.8, color='darkorange', alpha=0.7)
+ax3.set_title('STM32: Histograma MANUAL')
+ax4.hist(data_s, bins=30, color='orange', edgecolor='black')
+ax4.set_title('STM32: Histograma FUNCIÓN Python')
+plt.tight_layout()
+plt.show()
+
+# =============================================================================
+# 6️⃣ PARTE C: SNR Y RUIDOS (Lógica de contaminación controlada)
+# =============================================================================
+
+def calcular_snr(senal_limpia, senal_ruidosa):
+    """Aplica la fórmula: 10 * log10(Potencia_Señal / Potencia_Ruido)"""
+    ruido = senal_ruidosa - senal_limpia # Aislamos el ruido restando la señal base
+    potencia_senal = np.mean(senal_limpia**2) # Valor cuadrático medio de la señal
+    potencia_ruido = np.mean(ruido**2)        # Valor cuadrático medio del ruido
+    # El SNR se da en decibelios (dB) para manejar escalas logarítmicas
+    return 10 * np.log10(potencia_senal / potencia_ruido) if potencia_ruido != 0 else float('inf')
+
+t_noise = np.arange(len(data_s)) / fs_stm32
+
+# --- a. Ruido Gaussiano (Ruido térmico electrónico) ---
+# Genera ruido con campana de Gauss (promedio 0, desviación 0.08)
+ruido_gauss = np.random.normal(0, 0.08, len(data_s))
+senal_gauss = data_s + ruido_gauss
+snr_gauss = calcular_snr(data_s, senal_gauss)
+
+plt.figure(figsize=(10, 6))
+plt.subplot(2, 1, 1); plt.plot(t_noise, data_s, color='black'); plt.title('Señal Original (STM32)')
+plt.subplot(2, 1, 2); plt.plot(t_noise, senal_gauss, color='indianred'); plt.title(f'Señal + Ruido Gaussiano (SNR: {snr_gauss:.2f} dB)')
+plt.tight_layout(); plt.show()
+
+# --- b. Ruido Impulso (Interferencia de encendido/conmutación) ---
+senal_impulso = data_s.copy()
+# Elegimos 10 muestras al azar para inyectar picos extremos
+indices = np.random.randint(0, len(data_s), 10)
+for idx in indices: senal_impulso[idx] += np.random.choice([-1.2, 1.2]) # Añade picos que superan el máximo normal
+snr_impulso = calcular_snr(data_s, senal_impulso)
+
+plt.figure(figsize=(10, 6))
+plt.subplot(2, 1, 1); plt.plot(t_noise, data_s, color='black'); plt.title('Señal Original (STM32)')
+plt.subplot(2, 1, 2); plt.plot(t_noise, senal_impulso, color='seagreen'); plt.title(f'Señal + Ruido Impulso (SNR: {snr_impulso:.2f} dB)')
+plt.tight_layout(); plt.show()
+
+# --- c. Ruido Artefacto (Lógica de deriva de línea base por respiración) ---
+# Sumamos funciones seno de baja frecuencia (0.4 y 0.1 Hz) que simulan el inflado del pecho
+artefacto = 0.4 * np.sin(2 * np.pi * 0.4 * t_noise) + 0.1 * np.cos(2 * np.pi * 0.1 * t_noise)
+senal_artefacto = data_s + artefacto
+snr_artefacto = calcular_snr(data_s, senal_artefacto)
+
+plt.figure(figsize=(10, 6))
+plt.subplot(2, 1, 1); plt.plot(t_noise, data_s, color='black'); plt.title('Señal Original (STM32)')
+plt.subplot(2, 1, 2); plt.plot(t_noise, senal_artefacto, color='mediumpurple'); plt.title(f'Señal + Artefacto de Movimiento (SNR: {snr_artefacto:.2f} dB)')
+plt.tight_layout(); plt.show()
+
+# =============================================================================
+# 7️⃣ REPORTE FINAL DE TABLAS (Salida de datos)
+# =============================================================================
+
+# Imprime el resumen de calidad de señal en la consola
+print("\n" + "="*30); print("  REPORTE DE SNR"); print("="*30)
+print(f"Gaussiano: {snr_gauss:>10.2f} dB")
+print(f"Impulso:   {snr_impulso:>10.2f} dB")
+print(f"Artefacto: {snr_artefacto:>10.2f} dB"); print("="*30)
+
+# Imprime la comparativa de estadísticos entre las dos señales y los dos métodos (manual vs auto)
+print("\n" + "="*95)
+print(f"{'ESTADÍSTICO':<18} | {'PN (Manual)':<15} | {'PN (Función)':<15} | {'STM32 (Manual)':<15} | {'STM32 (Función)':<15}")
+print("-" * 95)
+print(f"{'Media':<18} | {m_p:>15.6f} | {f_m_p:>15.6f} | {m_s:>15.6f} | {f_m_s:>15.6f}")
+print(f"{'Desviación Std':<18} | {d_p:>15.6f} | {f_d_p:>15.6f} | {d_s:>15.6f} | {f_d_s:>15.6f}")
+print(f"{'Asimetría':<18} | {s_p:>15.6f} | {f_s_p:>15.6f} | {s_s:>15.6f} | {f_s_s:>15.6f}")
+print(f"{'Curtosis':<18} | {k_p:>15.6f} | {f_k_p:>15.6f} | {k_s:>15.6f} | {f_k_s:>15.6f}")
+print("="*95)
