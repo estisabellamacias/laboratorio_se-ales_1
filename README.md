@@ -183,15 +183,48 @@ Los siguientes diagramas representan la lógica algorítmica implementada en cad
 
 ## **Análisis de Resultados y Preguntas de Discusión**
 
-Determine el alcance y las posibles limitaciones de emplear parámetros
-estadísticos para detectar patologías en seres humanos.
-Determine el alcance y las posibles limitaciones de emplear parámetros
-estadísticos para evaluar la calidad de una señal biomédica. 
+**1. Determine el alcance y las posibles limitaciones de emplear parámetros estadísticos para detectar patologías en seres humanos.**
 
-- ¿Los valores estadísticos calculados sobre la señal sintética son
-exactamente iguales a los obtenidos a partir de la señal real? ¿Por qué?
-- ¿Afecta el tipo de ruido el valor de la SNR calculado? ¿Cuáles podrían ser
-las razones? 
+*Alcance:* El uso de parámetros estadísticos (media, desviación estándar, asimetría, curtosis, varianza, entre otros) permite:
 
-## **Conclusiones**
+- Cuantificar objetivamente características globales de una señal biomédica.
+
+- Identificar variabilidad asociada a posibles alteraciones fisiológicas.
+
+- Facilitar la comparación entre pacientes o entre estados fisiológicos (reposo vs. estrés, sano vs. patológico).
+
+*Limitaciones:* Sin embargo, existen limitaciones importantes:
+
+- Los parámetros estadísticos pierden información temporal (no consideran la morfología específica de ondas como P, QRS o T en ECG).
+
+- No distinguen entre patología real y ruido si no hay preprocesamiento adecuado.
+
+- Aunque sirven de apoyo, no sustituyen análisis clínico ni diagnóstico médico.
+
+En conclusión, los parámetros estadísticos son útiles como indicadores preliminares, pero no son suficientes por sí solos para diagnosticar patologías.
+
+**2. Determine el alcance y las posibles limitaciones de emplear parámetros estadísticos para evaluar la calidad de una señal biomédica.**
+
+*Alcance:* En la evaluación de calidad de la señal, los parámetros estadísticos son más útiles porque:
+
+- Permiten medir nivel de ruido (aumento de varianza).
+
+- Detectan deriva de línea base (cambio en la media).
+
+- Identifican presencia de picos anómalos (aumento de curtosis).
+
+En este caso son herramientas muy efectivas para determinar si la señal es apta para análisis posterior.
+
+*Limitaciones:* 
+- No identifican el tipo específico de ruido sin análisis adicional.
+
+- Pueden dar valores similares en señales con morfologías distintas.
+
+- No evalúan directamente la fidelidad fisiológica del contenido.
+
+**3. ¿Los valores estadísticos calculados sobre la señal sintética son exactamente iguales a los obtenidos a partir de la señal real? ¿Por qué?**
+
+**4. ¿Afecta el tipo de ruido el valor de la SNR calculado? ¿Cuáles podrían ser las razones?** 
+
+
 
