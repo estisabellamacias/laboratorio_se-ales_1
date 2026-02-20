@@ -184,15 +184,15 @@ Las siguientes imagen presentan los resultaos obtenidos:
 
 **Señal con ruido impulso**
 
-<img src="Graficas y tablas/señal con ruido Gaussiano.jpeg" width="600">
+<img src="Graficas y tablas/Señal con ruido impulso.jpeg" width="600">
 
-<em>Grafica 5. Señal con ruido Gaussiano.</em>
+<em>Grafica 5. Señal con ruido impulso.</em>
 
 **Señal con ruido artefacto de movimiento**
 
-<img src="Graficas y tablas/señal con ruido Gaussiano.jpeg" width="600">
+<img src="Graficas y tablas/Señal con ruido artefacto de movimiento.jpeg" width="600">
 
-<em>Grafica 6. Señal con ruido Gaussiano.</em>
+<em>Grafica 6. Señal con ruido artefacto de movimiento.</em>
 
 **Tabla de reporte del SNR de los diferentes ruidos**
 
