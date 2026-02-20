@@ -156,6 +156,12 @@ Esto asegura que se procesen paquetes completos equivalentes a 25 muestras.
 
 ## **Imagenes**
 
+Las siguientes imagen presentan los resultaos obtenidos:
+
+**Señal de PhysioNet comparada con la señal de la STM32**
+
+<img src="/Señal physionet y stm32.jpeg" width="600">
+
 
 
 ## **Diagramas de flujo**
