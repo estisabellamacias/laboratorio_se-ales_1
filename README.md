@@ -176,36 +176,35 @@ Las siguientes imagen presentan los resultaos obtenidos:
 
 <em>Grafica 3.Comparacion de histogramas de la señal de la STM32 .</em>
 
-****
+**Señal con ruido Gaussiano**
 
-<img src=".jpeg" width="600">
+<img src="Graficas y tablas/señal con ruido Gaussiano.jpeg" width="600">
 
-<em>Grafica . .</em>
+<em>Grafica 4. Señal con ruido Gaussiano.</em>
 
-****
+**Señal con ruido impulso**
 
-<img src=".jpeg" width="600">
+<img src="Graficas y tablas/señal con ruido Gaussiano.jpeg" width="600">
 
-<em>Grafica . .</em>
+<em>Grafica 5. Señal con ruido Gaussiano.</em>
 
-****
+**Señal con ruido artefacto de movimiento**
 
-<img src=".jpeg" width="600">
+<img src="Graficas y tablas/señal con ruido Gaussiano.jpeg" width="600">
 
-<em>Grafica . .</em>
+<em>Grafica 6. Señal con ruido Gaussiano.</em>
 
-****
+**Tabla de reporte del SNR de los diferentes ruidos**
 
-<img src=".jpeg" width="600">
+<img src="Graficas y tablas/Reporte SNR.jpeg" width="600">
 
-<em>Grafica . .</em>
+<em>Tabla1. Tabla con el reporte del SNR .</em>
 
-****
+**Tabla comparativa calculos estadisticos**
 
-<img src=".jpeg" width="600">
+<img src="Graficas y tablas/Tabla comparativa.jpeg" width="600">
 
-<em>Grafica . .</em>
-
+<em>Tabla2. Tabla comparativa resultados calculos estadisticos.</em>
 
 
 ## **Diagramas de flujo**
@@ -274,7 +273,26 @@ En este caso son herramientas muy efectivas para determinar si la señal es apta
 
 **3. ¿Los valores estadísticos calculados sobre la señal sintética son exactamente iguales a los obtenidos a partir de la señal real? ¿Por qué?**
 
+No, no son iguales. Aunque ambas representan el mismo fenómeno (ECG), sus propiedades estadísticas difieren por las siguientes razones técnicas:
+
+- Pureza vs. Ruido Ambiental: La señal de la STM32, al estar en condiciones ideales, presenta una línea base perfectamente plana y picos definidos sin fluctuaciones térmicas. Esto resulta en una Media prácticamente en cero y una Desviación Estándar que solo mide la energía de los complejos QRS. En cambio, la de PhysioNet contiene ruido electromagnético y biológico real, lo que "ensucia" la distribución y modifica la varianza.
+
+- Morfología y Momentos Superiores (Asimetría y Curtosis):
+
+*Asimetría (Skewness):* La señal de PhysioNet tiene una asimetría menor (2.78) comparada con la del STM32 (4.16). Esto indica que en la señal ideal del STM32, los picos R son mucho más prominentes y limpios respecto al resto de la señal, mientras que en la real, el ruido "rellena" los valles y suaviza esa inclinación hacia los valores positivos.
+
+*Curtosis:* La curtosis de la STM32 es más alta (22.23) que la de PhysioNet (17.75). Una curtosis elevada (leptocúrtica) significa que la señal tiene picos muy agudos y extremos. La señal ideal del STM32 tiene ondas R muy finas y "puntiagudas", mientras que en la señal real, el ruido ensancha la base de la señal, reduciendo su "picudez" estadística.
+
+- Cuantización y Muestreo: La señal de la STM32 está limitada por la resolución de su ADC (10 o 12 bits) y una frecuencia de 100 Hz, mientras que PhysioNet usa equipos médicos de alta gama con mayor tasa de muestreo, capturando detalles finos que la estadística detecta como variaciones de alta frecuencia.
+  
 **4. ¿Afecta el tipo de ruido el valor de la SNR calculado? ¿Cuáles podrían ser las razones?** 
 
+Sí, el tipo de ruido afecta significativamente el SNR porque cada uno ataca la señal con una energía y una distribución temporal distinta. La relación Señal-Ruido (SNR) es inversamente proporcional a la potencia del ruido: si el ruido tiene mucha amplitud, el SNR cae.
 
+*Análisis por tipo de ruido según los resultados:*
+- Ruido Gaussiano (SNR: 6.50 dB): Este ruido es de baja amplitud (desviación de 0.08) y se distribuye uniformemente por toda la señal. Aunque "borronea" la señal, su potencia total es pequeña comparada con la potencia de los picos del ECG. Es el ruido típico de los componentes electrónicos del STM32.
+
+- Ruido de Impulso (SNR: 2.06 dB): A diferencia del anterior, este ruido no es constante, sino que son "golpes" de gran magnitud (picos de 1.2). Aunque ocurren pocas veces, cada impacto tiene muchísima energía. Al promediar la potencia del ruido en la fórmula del SNR, estos pocos picos pesan tanto que degradan la relación mucho más que el ruido gaussiano constante. 
+
+- Artefacto de Movimiento (SNR: -4.84 dB): Es el único con SNR negativo, lo que significa que el ruido tiene más potencia que la propia señal de ECG. Al ser una onda senoidal de baja frecuencia y gran amplitud (0.4), desplaza toda la línea base hacia arriba y abajo. En nuestro caso (Ing.biomédica), esto es crítico porque la respiración o movimiento del paciente oculta por completo la morfología de la señal, haciendo que la energía del error sea mucho mas grande.
 
