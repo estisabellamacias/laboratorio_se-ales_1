@@ -160,7 +160,51 @@ Las siguientes imagen presentan los resultaos obtenidos:
 
 **Señal de PhysioNet comparada con la señal de la STM32**
 
-<img src="/Señal physionet y stm32.jpeg" width="600">
+<img src="Graficas y tablas/Señal physionet y stm32.jpeg" width="600">
+
+<em>Grafica 1. Comparacion de señales PhysioNet y STM32.</em>
+
+**Histograma manual e histograma funciones Python (Señal PhysioNet)**
+
+<img src="Graficas y tablas/histograma physionet.jpeg" width="600">
+
+<em>Grafica 2. Comparacion de histogramas de la señal de PhysioNet.</em>
+
+**Histograma manual e histograma funciones Python (Señal STM32)**
+
+<img src="Graficas y tablas/Histograma stm.jpeg" width="600">
+
+<em>Grafica 3.Comparacion de histogramas de la señal de la STM32 .</em>
+
+****
+
+<img src=".jpeg" width="600">
+
+<em>Grafica . .</em>
+
+****
+
+<img src=".jpeg" width="600">
+
+<em>Grafica . .</em>
+
+****
+
+<img src=".jpeg" width="600">
+
+<em>Grafica . .</em>
+
+****
+
+<img src=".jpeg" width="600">
+
+<em>Grafica . .</em>
+
+****
+
+<img src=".jpeg" width="600">
+
+<em>Grafica . .</em>
 
 
 
